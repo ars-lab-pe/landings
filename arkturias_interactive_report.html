@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARKTURIAS: Hub de Transformación Operativa</title>
+
+    <!-- Chosen Palette: Modern Tech & Analytics (Slate-900 bg, Indigo-600 primary, Emerald-500 success, Rose-500 danger, Amber-500 warning) -->
+    
+    <!-- Application Structure Plan: 
+         Structure: A Tabbed Dashboard Web Application. 
+         Why: The source material details a clear 'Before' (Problems/Impact), 'Transition' (Architecture), and 'After' (Ecosystem/Results). A tabbed interface allows users to explore this narrative linearly or jump straight to the solution architecture.
+         Flow: 
+         1. Diagnóstico (The Bottleneck) - Understand current operational pains.
+         2. Impacto (The Cost) - See financial and systemic consequences.
+         3. Arquitectura (The Solution) - Interactive exploration of the new digital ecosystem.
+         4. Proyección (The Future) - Community and peripheral benefits.
+    -->
+
+    <!-- Visualization & Content Choices: 
+         - Diagnóstico -> Goal: Organize/Inform -> Interactive Problem List + Radar Chart (Chart.js) -> Shows multivariate severity. Library: Vanilla JS + Chart.js. NO SVG.
+         - Impacto -> Goal: Compare -> Bar Chart (Cash Flow) & Doughnut (Leaks) -> Highlights financial disparity manual vs digital. Library: Chart.js. NO SVG.
+         - Arquitectura -> Goal: Organize/Relationships -> Interactive HTML/CSS Grid Diagram -> Clickable components revealing details (SCTR, Offline mode) without complex SVG flows. Library: HTML/CSS/JS. NO SVG/Mermaid.
+         - Proyección -> Goal: Compare -> Horizontal Bar Chart -> Ranks value perception across stakeholders. Library: Chart.js. NO SVG.
+    -->
+
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; color: #0F172A; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        
+        /* Required Chart Container Styling */
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-wrapper { height: 350px; }
+        }
+
+        /* Nav Tab Styling */
+        .tab-btn { transition: all 0.2s ease-in-out; border-bottom: 2px solid transparent; }
+        .tab-btn.active { border-bottom-color: #4F46E5; color: #4F46E5; font-weight: 600; }
+        
+        /* Interactive Diagram Nodes */
+        .arch-node { transition: all 0.2s ease; cursor: pointer; border: 2px solid transparent; }
+        .arch-node:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .arch-node.active-node { border-color: #4F46E5; background-color: #EEF2FF; }
+
+        /* Problem Item Styling */
+        .problem-item { transition: background-color 0.2s ease; cursor: pointer; }
+        .problem-item:hover { background-color: #F1F5F9; }
+        .problem-item.active { border-left: 4px solid #E11D48; background-color: #FFF1F2; }
+
+        /* Utilities */
+        .hidden-section { display: none; }
+        .fade-in { animation: fadeIn 0.4s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="antialiased h-screen flex flex-col overflow-hidden">
+
+    <!-- Header & Navigation -->
+    <header class="bg-white border-b border-slate-200 shrink-0 z-10 shadow-sm relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center py-4">
+                <div class="flex items-center mb-4 md:mb-0">
+                    <span class="text-2xl font-bold tracking-tight text-slate-900">ARKTURIAS <span class="text-indigo-600">Sync</span></span>
+                    <span class="ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">Intelligence Report</span>
+                </div>
+                <nav class="flex space-x-2 md:space-x-8 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+                    <button class="tab-btn active px-3 py-2 text-sm font-medium text-slate-600 whitespace-nowrap" data-target="view-diagnostico">1. Diagnóstico</button>
+                    <button class="tab-btn px-3 py-2 text-sm font-medium text-slate-600 whitespace-nowrap" data-target="view-impacto">2. Impacto Financiero</button>
+                    <button class="tab-btn px-3 py-2 text-sm font-medium text-slate-600 whitespace-nowrap" data-target="view-arquitectura">3. Arquitectura Solución</button>
+                    <button class="tab-btn px-3 py-2 text-sm font-medium text-slate-600 whitespace-nowrap" data-target="view-ecosistema">4. Ecosistema & Valor</button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area (Scrollable) -->
+    <main class="flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6 lg:p-8">
+        <div class="max-w-7xl mx-auto">
+
+            <!-- SECTION 1: DIAGNÓSTICO -->
+            <section id="view-diagnostico" class="fade-in block">
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-slate-900 mb-2">Cuellos de Botella Críticos</h1>
+                    <p class="text-slate-600 max-w-3xl">La gestión de cuadrillas en campo sufre de una dependencia paralizante de procesos analógicos. Explora los puntos de dolor detectados que ralentizan la operación e introducen riesgos severos, desde la liquidación manual hasta el descontrol de inventario.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- Interactive Problem List -->
+                    <div class="lg:col-span-5 flex flex-col gap-3">
+                        <div class="glass-panel p-4 rounded-xl problem-item active" data-risk="0" onclick="updateProblemDetails(0)">
+                            <div class="flex items-center">
+                                <span class="text-2xl mr-3">&#x1F4DD;</span> <!-- Memo -->
+                                <div>
+                                    <h3 class="font-bold text-slate-800">Liquidaciones Lentas (Formatos Físicos)</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-4 rounded-xl problem-item" data-risk="1" onclick="updateProblemDetails(1)">
+                            <div class="flex items-center">
+                                <span class="text-2xl mr-3">&#x1F6A8;</span> <!-- Siren -->
+                                <div>
+                                    <h3 class="font-bold text-slate-800">Descontrol de Materiales (Cardex)</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-4 rounded-xl problem-item" data-risk="2" onclick="updateProblemDetails(2)">
+                            <div class="flex items-center">
+                                <span class="text-2xl mr-3">&#x26A0;&#xFE0F;</span> <!-- Warning -->
+                                <div>
+                                    <h3 class="font-bold text-slate-800">Riesgo Legal y Permisos (SCTR)</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-4 rounded-xl problem-item" data-risk="3" onclick="updateProblemDetails(3)">
+                            <div class="flex items-center">
+                                <span class="text-2xl mr-3">&#x1F4F4;</span> <!-- Tech gap -->
+                                <div>
+                                    <h3 class="font-bold text-slate-800">Brecha en Adopción Tecnológica</h3>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Text Panel -->
+                        <div class="mt-4 p-5 bg-indigo-50 border border-indigo-100 rounded-xl">
+                            <h4 id="problem-detail-title" class="font-bold text-indigo-900 mb-2">Impacto Específico</h4>
+                            <p id="problem-detail-text" class="text-sm text-indigo-800">Selecciona un punto de dolor para ver detalles operativos.</p>
+                        </div>
+                    </div>
+
+                    <!-- Radar Chart -->
+                    <div class="lg:col-span-7 glass-panel p-6 rounded-2xl flex flex-col justify-center items-center">
+                        <h3 class="text-lg font-bold text-slate-700 w-full text-center mb-4">Mapa de Severidad de Riesgos</h3>
+                        <div class="chart-wrapper w-full">
+                            <canvas id="chart-radar-risk"></canvas>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-4 text-center max-w-md">Evaluación de impacto sobre la rentabilidad y escalabilidad de Arkturias (Escala 1-10).</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: IMPACTO FINANCIERO -->
+            <section id="view-impacto" class="fade-in hidden-section">
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-slate-900 mb-2">El Golpe Financiero</h1>
+                    <p class="text-slate-600 max-w-3xl">Las deficiencias operativas trascienden el campo y golpean directamente los estados financieros. Analizamos la dilatación del flujo de caja (retraso en facturación) y la distribución de las fugas de rentabilidad ocultas.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Cash Flow Chart -->
+                    <div class="glass-panel p-6 rounded-2xl flex flex-col h-full">
+                        <div class="mb-4">
+                            <h3 class="text-xl font-bold text-slate-800">Dilatación del Flujo de Caja</h3>
+                            <p class="text-sm text-slate-500">Comparativa de tiempos del ciclo de liquidación: Modelo Manual actual vs. Proyección con Ecosistema Digital en Tiempo Real.</p>
+                        </div>
+                        <div class="chart-wrapper flex-grow">
+                            <canvas id="chart-bar-cashflow"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Leaks Doughnut -->
+                    <div class="glass-panel p-6 rounded-2xl flex flex-col h-full">
+                        <div class="mb-4">
+                            <h3 class="text-xl font-bold text-slate-800">Composición de Fugas de Rentabilidad</h3>
+                            <p class="text-sm text-slate-500">Distribución estimada del impacto económico generado por ineficiencias, fraudes y sobrecostos burocráticos.</p>
+                        </div>
+                        <div class="chart-wrapper flex-grow">
+                            <canvas id="chart-doughnut-leaks"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: ARQUITECTURA (LA SOLUCIÓN) -->
+            <section id="view-arquitectura" class="fade-in hidden-section">
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-slate-900 mb-2">Ecosistema Digital Integral</h1>
+                    <p class="text-slate-600 max-w-3xl">La propuesta de "Innovación por Impuestos" requiere una arquitectura conectada. Haz clic en los diferentes módulos del ecosistema para entender cómo resuelven los problemas específicos de Arkturias mediante automatización y validación cruzada.</p>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-6 lg:p-10 mb-8 border-t-4 border-indigo-500">
+                    
+                    <!-- HTML Diagram System -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        
+                        <div class="arch-node bg-white p-4 rounded-xl shadow text-center border-slate-200" onclick="showArchitectureDetail('cloud')">
+                            <div class="text-4xl mb-2">&#x2601;&#xFE0F;</div> <!-- Cloud -->
+                            <h4 class="font-bold text-slate-800 text-sm">Motor Cloud (Backend)</h4>
+                        </div>
+                        
+                        <div class="arch-node bg-white p-4 rounded-xl shadow text-center border-slate-200" onclick="showArchitectureDetail('app')">
+                            <div class="text-4xl mb-2">&#x1F4F1;</div> <!-- Mobile -->
+                            <h4 class="font-bold text-slate-800 text-sm">App Móvil Cuadrilla</h4>
+                        </div>
+                        
+                        <div class="arch-node bg-white p-4 rounded-xl shadow text-center border-slate-200 active-node" onclick="showArchitectureDetail('portal')">
+                            <div class="text-4xl mb-2">&#x1F464;</div> <!-- User -->
+                            <h4 class="font-bold text-slate-800 text-sm">Portal Cliente Final</h4>
+                        </div>
+                        
+                        <div class="arch-node bg-white p-4 rounded-xl shadow text-center border-slate-200" onclick="showArchitectureDetail('dashboard')">
+                            <div class="text-4xl mb-2">&#x1F4BB;</div> <!-- Laptop -->
+                            <h4 class="font-bold text-slate-800 text-sm">Dashboard Operaciones</h4>
+                        </div>
+
+                    </div>
+
+                    <!-- Dynamic Details Area -->
+                    <div id="arch-detail-container" class="bg-slate-50 p-6 rounded-xl border border-slate-200 min-h-[200px]">
+                        <div class="flex items-start">
+                            <div id="arch-icon" class="text-5xl mr-6 bg-white p-4 rounded-full shadow-sm">&#x1F464;</div>
+                            <div>
+                                <h3 id="arch-title" class="text-2xl font-bold text-slate-800 mb-2">Portal del Cliente / Autoservicio</h3>
+                                <p id="arch-desc" class="text-slate-600 mb-4">Enfocado en la transparencia y seguridad para el usuario final (ej. dueño del predio).</p>
+                                
+                                <h4 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-2">Capacidades Críticas:</h4>
+                                <ul id="arch-features" class="space-y-2">
+                                    <li class="flex items-center text-sm text-slate-700"><span class="text-emerald-500 mr-2">&#x2714;</span> Generación de código QR dinámico (15 min validez).</li>
+                                    <li class="flex items-center text-sm text-slate-700"><span class="text-emerald-500 mr-2">&#x2714;</span> Contingencia Token SMS para usuarios sin Smartphone.</li>
+                                    <li class="flex items-center text-sm text-slate-700"><span class="text-emerald-500 mr-2">&#x2714;</span> Transparencia del trabajo realizado e identidad técnica.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- SECTION 4: ECOSISTEMA & RESULTADOS -->
+            <section id="view-ecosistema" class="fade-in hidden-section">
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-slate-900 mb-2">Impacto Periférico y Ecosistema</h1>
+                    <p class="text-slate-600 max-w-3xl">La digitalización en Arkturias no es aislada. Crea un efecto en cascada que estandariza la industria, beneficia a los proveedores y mejora drásticamente la calidad de servicio percibida por la comunidad y el usuario final.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+                    <!-- Cards representing peripheral industries -->
+                    <div class="glass-panel p-6 rounded-xl border-t-4 border-amber-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-slate-800 text-lg">Contratistas y Telcos</h3>
+                            <span class="text-2xl">&#x1F3D7;&#xFE0F;</span> <!-- Building -->
+                        </div>
+                        <p class="text-sm text-slate-600">Alivio de la burocracia administrativa. El sistema permite traducir la misma data de campo a múltiples plantillas de liquidación (ej. Win, Claro, Optical) sin reprocesos manuales.</p>
+                    </div>
+
+                    <div class="glass-panel p-6 rounded-xl border-t-4 border-emerald-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-slate-800 text-lg">Servicios Públicos (Utilities)</h3>
+                            <span class="text-2xl">&#x1F4A7;</span> <!-- Water drop -->
+                        </div>
+                        <p class="text-sm text-slate-600">Escalabilidad directa a proveedores de agua, luz y gas, quienes enfrentan retos idénticos en geolocalización, seguridad ciudadana e inventario de campo.</p>
+                    </div>
+
+                    <div class="glass-panel p-6 rounded-xl border-t-4 border-indigo-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-slate-800 text-lg">Logística y Mantenimiento</h3>
+                            <span class="text-2xl">&#x1F69A;</span> <!-- Truck -->
+                        </div>
+                        <p class="text-sm text-slate-600">Control estricto de viáticos y combustible mediante el cruce de geolocalización continua vs. comprobantes, eliminando drásticamente el fraude.</p>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl">
+                    <div class="mb-4 text-center">
+                        <h3 class="text-xl font-bold text-slate-800">Impacto en la Comunidad y Calidad de Servicio</h3>
+                        <p class="text-sm text-slate-500">Valoración cualitativa proyectada del impacto en el usuario final y entorno urbano.</p>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-horizontal-community"></canvas>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // --- Core Utility: Text Wrapping for Chart Labels ---
+        function wrapLabels(labels, maxLen = 16) {
+            return labels.map(label => {
+                const words = label.split(' ');
+                let lines = [];
+                let currentLine = '';
+                words.forEach(word => {
+                    if ((currentLine + word).length > maxLen) {
+                        if (currentLine) lines.push(currentLine.trim());
+                        currentLine = word + ' ';
+                    } else {
+                        currentLine += word + ' ';
+                    }
+                });
+                if (currentLine) lines.push(currentLine.trim());
+                return lines;
+            });
+        }
+
+        // --- Core Utility: Global Chart Tooltip Config ---
+        const commonTooltipConfig = {
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: function(tooltipItems) {
+                            const item = tooltipItems[0];
+                            let label = item.chart.data.labels[item.dataIndex];
+                            if (Array.isArray(label)) {
+                                return label.join(' ');
+                            } else {
+                                return label;
+                            }
+                        }
+                    }
+                },
+                legend: {
+                    labels: { font: { family: "'Inter', sans-serif" } }
+                }
+            },
+            maintainAspectRatio: false
+        };
+
+        // --- State Management ---
+        const appState = {
+            activeTab: 'view-diagnostico',
+            chartsInitialized: {
+                diagnostico: false,
+                impacto: false,
+                ecosistema: false
+            }
+        };
+
+        // --- Data Repositories ---
+        const problemData = [
+            {
+                title: "Alta dependencia administrativa",
+                desc: "Formatos exigidos por clientes como Óptical se llenan a mano. Requiere múltiples horas-hombre y dedicación exclusiva al seguimiento documental, dilatando todo el proceso."
+            },
+            {
+                title: "Pérdidas y Reportes Falsos",
+                desc: "Falta una carga digital de guías para descontar inventario diario en campo. Produce mal liquidaciones, pérdida de materiales y afectación directa a la rentabilidad."
+            },
+            {
+                title: "Multas y Paralizaciones",
+                desc: "Control deficiente de permisos municipales para romper vías públicas y vigencias de pólizas Sindicato/SCTR. Trabajar sin esto expone a Arkturias a multas severas inmediatas."
+            },
+            {
+                title: "Resistencia del Operario",
+                desc: "Historial de proyectos fallidos. Personal operativo en campo se resiste a usar herramientas complejas, volviendo a procesos antiguos. Requiere interfaces altamente intuitivas."
+            }
+        ];
+
+        const architectureData = {
+            cloud: {
+                icon: "&#x2601;&#xFE0F;",
+                title: "Motor Central Cloud & Backend",
+                desc: "El cerebro del sistema. Orquesta toda la operación entre las partes y procesa lógicas de negocio críticas.",
+                features: [
+                    "Ingesta y procesamiento de solicitudes de Telcos.",
+                    "Algoritmos de enrutamiento y pre-asignación de materiales.",
+                    "Módulo Automático de validación SCTR (bloquea rutas si póliza vence).",
+                    "Traductor de salidas a múltiples plantillas de clientes (Win, Claro, etc)."
+                ]
+            },
+            app: {
+                icon: "&#x1F4F1;",
+                title: "App Móvil para la Cuadrilla",
+                desc: "Herramienta de campo. Diseñada para vencer la brecha digital con alta usabilidad.",
+                features: [
+                    "Modo Offline con Búfer Local (sincroniza al recuperar señal).",
+                    "Doble Validación: Captura Geofencing (20m) y lectura de QR.",
+                    "Reporte de inventario descontado en tiempo real.",
+                    "Registro de viáticos cruzado con geolocalización."
+                ]
+            },
+            portal: {
+                icon: "&#x1F464;",
+                title: "Portal del Cliente / Autoservicio",
+                desc: "Enfocado en la transparencia y seguridad para el usuario final (ej. dueño del predio).",
+                features: [
+                    "Generación de código QR dinámico (15 min validez) para ingreso seguro.",
+                    "Contingencia Token SMS para usuarios sin Smartphone/Adultos mayores.",
+                    "Transparencia del trabajo realizado e identidad técnica comprobada."
+                ]
+            },
+            dashboard: {
+                icon: "&#x1F4BB;",
+                title: "Dashboard Back Office",
+                desc: "Centro de control para Arkturias y empresas de Telecomunicaciones.",
+                features: [
+                    "Monitoreo de cuadrillas en tiempo real (evita visitas fantasma).",
+                    "Alertas de desvíos de ruta o Geofencing.",
+                    "Validación de actas digitales para facturación inmediata."
+                ]
+            }
+        };
+
+        // --- Interaction Logic: Navigation ---
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Update Buttons
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+
+                // Update Views
+                const targetId = e.target.getAttribute('data-target');
+                document.querySelectorAll('section').forEach(sec => sec.classList.add('hidden-section'));
+                document.getElementById(targetId).classList.remove('hidden-section');
+
+                // Initialize charts lazily based on view
+                if (targetId === 'view-diagnostico' && !appState.chartsInitialized.diagnostico) initDiagnosticoCharts();
+                if (targetId === 'view-impacto' && !appState.chartsInitialized.impacto) initImpactoCharts();
+                if (targetId === 'view-ecosistema' && !appState.chartsInitialized.ecosistema) initEcosistemaCharts();
+            });
+        });
+
+        // --- Interaction Logic: Diagnostics Problems ---
+        window.updateProblemDetails = function(index) {
+            // UI Update
+            document.querySelectorAll('.problem-item').forEach(item => {
+                item.classList.remove('active', 'border-l-4', 'border-rose-600', 'bg-rose-50');
+            });
+            const clickedElement = document.querySelector(`.problem-item[data-risk="${index}"]`);
+            if(clickedElement) {
+                clickedElement.classList.add('active', 'border-l-4', 'border-rose-600', 'bg-rose-50');
+            }
+
+            // Data Update
+            const data = problemData[index];
+            document.getElementById('problem-detail-title').innerText = data.title;
+            document.getElementById('problem-detail-text').innerText = data.desc;
+        };
+
+        // --- Interaction Logic: Architecture Nodes ---
+        window.showArchitectureDetail = function(nodeKey) {
+            // UI Update
+            document.querySelectorAll('.arch-node').forEach(node => {
+                node.classList.remove('active-node');
+            });
+            // Find and activate the clicked node (simplistic match by inline onclick)
+            document.querySelectorAll('.arch-node').forEach(node => {
+                if(node.getAttribute('onclick').includes(nodeKey)) {
+                    node.classList.add('active-node');
+                }
+            });
+
+            // Data Update
+            const data = architectureData[nodeKey];
+            document.getElementById('arch-icon').innerHTML = data.icon;
+            document.getElementById('arch-title').innerText = data.title;
+            document.getElementById('arch-desc').innerText = data.desc;
+            
+            const featuresList = document.getElementById('arch-features');
+            featuresList.innerHTML = '';
+            data.features.forEach(feat => {
+                featuresList.innerHTML += `<li class="flex items-center text-sm text-slate-700"><span class="text-indigo-500 mr-2">&#x2714;</span> ${feat}</li>`;
+            });
+        };
+
+        // --- Chart Initialization Functions ---
+        
+        function initDiagnosticoCharts() {
+            const ctx = document.getElementById('chart-radar-risk').getContext('2d');
+            const labels = wrapLabels(["Lentitud Facturación", "Pérdida de Materiales", "Riesgo Legal / Multas", "Resistencia Operativa", "Visitas Fantasma"]);
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Severidad Actual',
+                        data: [9, 8, 10, 7, 8],
+                        backgroundColor: 'rgba(225, 29, 72, 0.2)', // Rose 600
+                        borderColor: '#E11D48',
+                        pointBackgroundColor: '#E11D48',
+                    }]
+                },
+                options: {
+                    ...commonTooltipConfig,
+                    scales: {
+                        r: {
+                            min: 0, max: 10,
+                            ticks: { display: false },
+                            pointLabels: { font: { family: "'Inter', sans-serif", size: 12 }, color: '#475569' }
+                        }
+                    }
+                }
+            });
+            appState.chartsInitialized.diagnostico = true;
+            
+            // Set initial problem detail state
+            updateProblemDetails(0);
+        }
+
+        function initImpactoCharts() {
+            // Cash Flow Bar Chart
+            const ctxBar = document.getElementById('chart-bar-cashflow').getContext('2d');
+            const labelsBar = wrapLabels(["Recopilación de Firmas", "Cruce de Inventario", "Tiempo a Facturación"]);
+            new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: labelsBar,
+                    datasets: [
+                        {
+                            label: 'Días (Proceso Manual)',
+                            data: [7, 4, 11],
+                            backgroundColor: '#94A3B8' // Slate 400
+                        },
+                        {
+                            label: 'Días (Ecosistema Digital)',
+                            data: [0.5, 0, 1], // Almost instant
+                            backgroundColor: '#10B981' // Emerald 500
+                        }
+                    ]
+                },
+                options: {
+                    ...commonTooltipConfig,
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Días Hábiles Promedio' } }
+                    }
+                }
+            });
+
+            // Leaks Doughnut Chart
+            const ctxDough = document.getElementById('chart-doughnut-leaks').getContext('2d');
+            const labelsDough = wrapLabels(["Robo/Pérdida Materiales", "Fraude en Combustible", "Multas Municipales/SCTR", "Horas Administrativas"]);
+            new Chart(ctxDough, {
+                type: 'doughnut',
+                data: {
+                    labels: labelsDough,
+                    datasets: [{
+                        data: [35, 25, 20, 20],
+                        backgroundColor: ['#4F46E5', '#F59E0B', '#E11D48', '#0EA5E9'], // Indigo, Amber, Rose, Sky
+                        borderWidth: 2,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    ...commonTooltipConfig,
+                    cutout: '60%',
+                    plugins: {
+                        ...commonTooltipConfig.plugins,
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+            appState.chartsInitialized.impacto = true;
+        }
+
+        function initEcosistemaCharts() {
+            const ctx = document.getElementById('chart-horizontal-community').getContext('2d');
+            const labels = wrapLabels(["Seguridad en Domicilios (QR)", "Menor Impacto Vía Pública", "Cierre Brecha Digital Operaria", "Puntualidad en Servicio"]);
+            new Chart(ctx, {
+                type: 'bar',
+                indexAxis: 'y', // Horizontal
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Puntaje de Mejora Percibida (0-100)',
+                        data: [95, 80, 85, 90],
+                        backgroundColor: '#4F46E5',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    ...commonTooltipConfig,
+                    scales: {
+                        x: { beginAtZero: true, max: 100 }
+                    }
+                }
+            });
+            appState.chartsInitialized.ecosistema = true;
+        }
+
+        // --- Initialization on Load ---
+        window.onload = () => {
+            // Init the first visible tab's charts
+            initDiagnosticoCharts();
+            // Set initial Architecture detail
+            showArchitectureDetail('portal');
+        };
+
+    </script>
+</body>
+</html>
