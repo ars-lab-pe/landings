@@ -171,7 +171,23 @@
             </section>
 
             <section id="timeline-view" class="view-content hidden animate-fadeIn">
-                <div id="timeline-container" class="relative border-l-2 border-indigo-200 ml-4 md:ml-6 space-y-8 py-4">
+                <!-- Controles de la línea de tiempo -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                    <div class="text-sm font-bold text-slate-800">
+                        <i class="fa-solid fa-timeline text-indigo-600 mr-2"></i>Línea de Tiempo de Convocatorias
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 px-3 py-2 rounded-lg border border-slate-200 transition-all">
+                            <input type="checkbox" id="toggle-hide-past" onchange="toggleHidePastChange()" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                            <span>Ocultar registros pasados</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Contenedor horizontal -->
+                <div class="bg-slate-50/50 border border-slate-200/80 rounded-2xl p-4">
+                    <div id="timeline-container" class="flex gap-6 overflow-x-auto py-6 px-2 custom-scrollbar">
+                    </div>
                 </div>
             </section>
 
@@ -409,41 +425,111 @@
             });
         }
 
-        // Helper seguro de fechas
+        // Helper seguro de fechas en hora local
         function safeParseDate(dateStr) {
             if (!dateStr || typeof dateStr !== 'string') return new Date(8640000000000000);
             let dStr = dateStr.trim();
-            if (dStr.includes('-')) return new Date(dStr);
-            if (dStr.includes('/')) {
-                const p = dStr.split('/');
-                if (p[0].length === 4) return new Date(dStr);
-                return new Date(`${p[2]}-${p[1]}-${p[0]}`);
+            try {
+                if (dStr.includes('-')) {
+                    const p = dStr.split('-');
+                    if (p[0].length === 4) {
+                        return new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+                    }
+                    return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+                }
+                if (dStr.includes('/')) {
+                    const p = dStr.split('/');
+                    if (p[0].length === 4) {
+                        return new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+                    }
+                    return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+                }
+                return new Date(dStr);
+            } catch (e) {
+                return new Date(dStr);
             }
-            return new Date(dStr);
         }
 
-        // 4. LÍNEA DE TIEMPO
+        // Manejar el cambio del filtro de ocultar pasados
+        function toggleHidePastChange() {
+            filterData();
+        }
+
+        // 4. LÍNEA DE TIEMPO HORIZONTAL
         function renderTimeline(data) {
             const container = document.getElementById('timeline-container');
             container.innerHTML = '';
+
+            const hidePastCheckbox = document.getElementById('toggle-hide-past');
+            const hidePast = hidePastCheckbox ? hidePastCheckbox.checked : false;
+
             const itemsConFecha = data.filter(item => item['Cierre'] && (item['Cierre'].includes('-') || item['Cierre'].includes('/')));
             itemsConFecha.sort((a, b) => safeParseDate(a['Cierre']) - safeParseDate(b['Cierre']));
 
-            if (itemsConFecha.length === 0) {
-                container.innerHTML = `<p class="p-4 text-slate-400 italic text-sm">No hay registros con plazos estructurados.</p>`;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const finalItems = itemsConFecha.filter(item => {
+                if (!hidePast) return true;
+                const itemDate = safeParseDate(item['Cierre']);
+                return itemDate >= today;
+            });
+
+            if (finalItems.length === 0) {
+                container.innerHTML = `<p class="p-8 text-slate-400 italic text-sm text-center w-full">No hay registros con plazos estructurados para mostrar.</p>`;
                 return;
             }
 
-            itemsConFecha.forEach(item => {
+            finalItems.forEach((item, index) => {
+                const itemDate = safeParseDate(item['Cierre']);
+                const isPast = itemDate < today;
+
+                const isFirst = index === 0;
+                const isLast = index === finalItems.length - 1;
+
                 const node = document.createElement('div');
-                node.className = "relative pl-6 md:pl-8";
+                node.className = "flex-shrink-0 w-72 relative z-10 flex flex-col";
+
+                // Muted/grayed out styles if past
+                const cardClass = isPast 
+                    ? "bg-slate-50/80 border-slate-200 opacity-60 grayscale" 
+                    : "bg-white border-slate-200 hover:shadow-md transition-shadow duration-300";
+                
+                const dotClass = isPast 
+                    ? "bg-slate-400 ring-slate-100" 
+                    : "bg-indigo-600 ring-indigo-100 animate-pulse";
+
+                const badgeClass = isPast
+                    ? "bg-slate-200 text-slate-500"
+                    : (item.Origen === 'Nacional' ? "bg-amber-100 text-amber-800" : "bg-indigo-100 text-indigo-800");
+
+                const dateColorClass = isPast ? "text-slate-400" : "text-rose-600 font-bold";
+
+                const lineClass = isPast ? "bg-slate-200" : "bg-indigo-200";
+
+                const leftConnector = isFirst ? "" : `<div class="absolute left-0 right-1/2 top-1/2 h-0.5 ${lineClass} -translate-y-1/2 z-0"></div>`;
+                const rightConnector = isLast ? "" : `<div class="absolute left-1/2 right-0 top-1/2 h-0.5 ${lineClass} -translate-y-1/2 z-0"></div>`;
+
                 node.innerHTML = `
-                    <div class="absolute -left-[9px] top-1 bg-indigo-600 w-4 h-4 rounded-full ring-4 ring-indigo-100"></div>
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm max-w-2xl">
-                        <span class="text-[10px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-wider">${item.Origen} • ID ${item.ID}</span>
-                        <h4 class="text-sm font-bold text-slate-900 mt-1">${item['Fondo & Título de Proyecto']}</h4>
-                        <p class="text-xs text-rose-600 font-mono font-bold mt-1"><i class="fa-regular fa-calendar-days mr-1"></i> Cierre: ${item['Cierre']}</p>
-                        <p class="text-xs text-slate-500 mt-1 truncate"><strong>Resp:</strong> ${item['Responsable'] || 'No asignado'} | <strong>Monto:</strong> ${item['Montos'] || 'Ver bases'}</p>
+                    <!-- Dot Area -->
+                    <div class="h-6 flex items-center justify-center mb-3 relative">
+                        ${leftConnector}
+                        ${rightConnector}
+                        <div class="w-3.5 h-3.5 rounded-full ${dotClass} ring-4 z-10"></div>
+                    </div>
+                    <!-- Card -->
+                    <div class="p-4 rounded-xl border ${cardClass} flex flex-col justify-between flex-grow border-slate-200">
+                        <div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${badgeClass}">${item.Origen} • ID ${item.ID}</span>
+                            <h4 class="text-sm font-bold text-slate-900 mt-2 leading-tight line-clamp-2">${item['Fondo & Título de Proyecto']}</h4>
+                            <p class="text-xs ${dateColorClass} font-mono mt-2 flex items-center gap-1">
+                                <i class="fa-regular fa-calendar-days"></i> Cierre: ${item['Cierre']}
+                            </p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 space-y-1">
+                            <p class="truncate"><strong>Responsable:</strong> ${item['Responsable'] || 'No asignado'}</p>
+                            <p class="truncate"><strong>Monto:</strong> ${item['Montos'] || 'Ver bases'}</p>
+                        </div>
                     </div>
                 `;
                 container.appendChild(node);
@@ -531,6 +617,21 @@
         .no-scrollbar {
             -ms-overflow-style: none;
             scrollbar-width: none;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
         }
     </style>
 </body>
